@@ -6,44 +6,78 @@ import { setupServer } from 'msw/node';
 import App from '../App';
 
 // Mock server to intercept API requests
+let items = [
+  { id: 1, name: 'Test Item 1', due_date: null, created_at: '2023-01-01T00:00:00.000Z' },
+  { id: 2, name: 'Test Item 2', due_date: null, created_at: '2023-01-02T00:00:00.000Z' },
+];
+
 const server = setupServer(
   // GET /api/items handler
   rest.get('/api/items', (req, res, ctx) => {
-    return res(
-      ctx.status(200),
-      ctx.json([
-        { id: 1, name: 'Test Item 1', due_date: null, created_at: '2023-01-01T00:00:00.000Z' },
-        { id: 2, name: 'Test Item 2', due_date: null, created_at: '2023-01-02T00:00:00.000Z' },
-      ])
-    );
+    const sort = req.url.searchParams.get('sort');
+    let result = [...items];
+
+    if (sort === 'due_date') {
+      result.sort((a, b) => {
+        if (!a.due_date && !b.due_date) return 0;
+        if (!a.due_date) return 1;
+        if (!b.due_date) return -1;
+        return a.due_date.localeCompare(b.due_date);
+      });
+    }
+
+    return res(ctx.status(200), ctx.json(result));
   }),
-  
+
   // POST /api/items handler
   rest.post('/api/items', (req, res, ctx) => {
     const { name, dueDate } = req.body;
-    
+
     if (!name || name.trim() === '') {
-      return res(
-        ctx.status(400),
-        ctx.json({ error: 'Item name is required' })
-      );
+      return res(ctx.status(400), ctx.json({ error: 'Item name is required' }));
     }
-    
-    return res(
-      ctx.status(201),
-      ctx.json({
-        id: 3,
-        name,
-        due_date: dueDate || null,
-        created_at: new Date().toISOString(),
-      })
-    );
+
+    const newItem = {
+      id: items.length + 1,
+      name,
+      due_date: dueDate || null,
+      created_at: new Date().toISOString(),
+    };
+
+    items = [...items, newItem];
+    return res(ctx.status(201), ctx.json(newItem));
+  }),
+
+  // PUT /api/items/:id handler
+  rest.put('/api/items/:id', (req, res, ctx) => {
+    const id = parseInt(req.params.id, 10);
+    const { name, dueDate } = req.body;
+
+    const existing = items.find((item) => item.id === id);
+    if (!existing) {
+      return res(ctx.status(404), ctx.json({ error: 'Item not found' }));
+    }
+
+    if (!name || name.trim() === '') {
+      return res(ctx.status(400), ctx.json({ error: 'Item name is required' }));
+    }
+
+    const updated = { ...existing, name, due_date: dueDate || null };
+    items = items.map((item) => (item.id === id ? updated : item));
+
+    return res(ctx.status(200), ctx.json(updated));
   })
 );
 
 // Setup and teardown for the mock server
 beforeAll(() => server.listen());
-afterEach(() => server.resetHandlers());
+afterEach(() => {
+  server.resetHandlers();
+  items = [
+    { id: 1, name: 'Test Item 1', due_date: null, created_at: '2023-01-01T00:00:00.000Z' },
+    { id: 2, name: 'Test Item 2', due_date: null, created_at: '2023-01-02T00:00:00.000Z' },
+  ];
+});
 afterAll(() => server.close());
 
 describe('App Component', () => {
@@ -65,8 +99,8 @@ describe('App Component', () => {
     
     // Wait for items to load
     await waitFor(() => {
-      expect(screen.getByText('Test Item 1')).toBeInTheDocument();
-      expect(screen.getByText('Test Item 2')).toBeInTheDocument();
+      expect(screen.getByText(/Test Item 1/i)).toBeInTheDocument();
+      expect(screen.getByText(/Test Item 2/i)).toBeInTheDocument();
     });
   });
 
@@ -105,7 +139,7 @@ describe('App Component', () => {
     });
 
     await waitFor(() => {
-      expect(screen.getByText('Test Item 1')).toBeInTheDocument();
+      expect(screen.getByText(/Test Item 1/i)).toBeInTheDocument();
     });
 
     const editButton = screen.getAllByText('Edit')[0];
@@ -133,7 +167,7 @@ describe('App Component', () => {
     });
 
     await waitFor(() => {
-      expect(screen.getByText('Test Item 1')).toBeInTheDocument();
+      expect(screen.getByText(/Test Item 1/i)).toBeInTheDocument();
     });
 
     // Edit one item to have a due date far away so we can verify sort order
