@@ -6,10 +6,10 @@
 }
 
 .App-header {
-  background-color: #282c34;
+  background-color: #9D3D1D;
   padding: 20px;
-  color: white;
-  border-radius: 8px;
+  color: #fff8e7;
+  border-radius: 0;
   margin-bottom: 20px;
 }
 
@@ -25,10 +25,10 @@ main {
 }
 
 section {
-  background-color: #f5f5f5;
+  background-color: #fff4e1;
   padding: 20px;
-  border-radius: 8px;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  border-radius: 0;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.15);
 }
 
 .add-item-section form {
@@ -46,16 +46,29 @@ input {
 
 button {
   padding: 8px 16px;
-  background-color: #61dafb;
-  color: #282c34;
+  background-color: #d35400;
+  color: #111;
   border: none;
-  border-radius: 4px;
+  border-radius: 0;
   cursor: pointer;
   font-weight: bold;
 }
 
 button:hover {
-  background-color: #21a1c9;
+  background-color: #e67e22;
+}
+
+.delete-btn {
+  background-color: #a81d1d;
+  color: white;
+  padding: 6px 12px;
+  font-size: 0.8rem;
+  margin-left: 10px;
+  border-radius: 0;
+}
+
+.delete-btn:hover {
+  background-color: #b83030;
 }
 
 ul {
@@ -76,12 +89,20 @@ li:last-child {
   border-bottom: none;
 }
 
+.item-actions,
+.edit-row {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
 .delete-btn {
-  background-color: #f44336;
+  background-color: #a81d1d;
   color: white;
   padding: 6px 12px;
   font-size: 0.8rem;
   margin-left: 10px;
+  border-radius: 0;
 }
 
 .delete-btn:hover {

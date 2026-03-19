@@ -34,12 +34,13 @@ describe('API Endpoints', () => {
       expect(item).toHaveProperty('id');
       expect(item).toHaveProperty('name');
       expect(item).toHaveProperty('created_at');
+      expect(item).toHaveProperty('due_date');
     });
   });
 
   describe('POST /api/items', () => {
-    it('should create a new item', async () => {
-      const newItem = { name: 'Test Item' };
+    it('should create a new item with due date', async () => {
+      const newItem = { name: 'Test Item', dueDate: '2024-12-31' };
       const response = await request(app)
         .post('/api/items')
         .send(newItem)
@@ -48,6 +49,7 @@ describe('API Endpoints', () => {
       expect(response.status).toBe(201);
       expect(response.body).toHaveProperty('id');
       expect(response.body.name).toBe(newItem.name);
+      expect(response.body.due_date).toBe(newItem.dueDate);
       expect(response.body).toHaveProperty('created_at');
     });
 
@@ -71,6 +73,44 @@ describe('API Endpoints', () => {
       expect(response.status).toBe(400);
       expect(response.body).toHaveProperty('error');
       expect(response.body.error).toBe('Item name is required');
+    });
+  });
+
+  describe('PUT /api/items/:id', () => {
+    it('should update an existing item', async () => {
+      const item = await createItem('Item To Edit');
+
+      const response = await request(app)
+        .put(`/api/items/${item.id}`)
+        .send({ name: 'Edited Item', dueDate: '2025-01-01' })
+        .set('Accept', 'application/json');
+
+      expect(response.status).toBe(200);
+      expect(response.body.id).toBe(item.id);
+      expect(response.body.name).toBe('Edited Item');
+      expect(response.body.due_date).toBe('2025-01-01');
+    });
+
+    it('should return 404 when updating a non-existing item', async () => {
+      const response = await request(app)
+        .put('/api/items/999999')
+        .send({ name: 'No Item' })
+        .set('Accept', 'application/json');
+
+      expect(response.status).toBe(404);
+      expect(response.body).toHaveProperty('error', 'Item not found');
+    });
+
+    it('should return 400 for invalid name', async () => {
+      const item = await createItem('Item To Edit');
+
+      const response = await request(app)
+        .put(`/api/items/${item.id}`)
+        .send({ name: '' })
+        .set('Accept', 'application/json');
+
+      expect(response.status).toBe(400);
+      expect(response.body).toHaveProperty('error', 'Item name is required');
     });
   });
 

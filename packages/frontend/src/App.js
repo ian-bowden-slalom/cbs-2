@@ -6,15 +6,19 @@ function App() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [newItem, setNewItem] = useState('');
+  const [newDueDate, setNewDueDate] = useState('');
+  const [sortByDueDate, setSortByDueDate] = useState(false);
+  const [editingItem, setEditingItem] = useState(null);
 
   useEffect(() => {
     fetchData();
-  }, []);
+  }, [sortByDueDate]);
 
   const fetchData = async () => {
     try {
       setLoading(true);
-      const response = await fetch('/api/items');
+      const query = sortByDueDate ? '?sort=due_date' : '';
+      const response = await fetch(`/api/items${query}`);
       if (!response.ok) {
         throw new Error('Network response was not ok');
       }
@@ -39,7 +43,7 @@ function App() {
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ name: newItem }),
+        body: JSON.stringify({ name: newItem.trim(), dueDate: newDueDate || null }),
       });
 
       if (!response.ok) {
@@ -49,6 +53,8 @@ function App() {
       const result = await response.json();
       setData([...data, result]);
       setNewItem('');
+      setNewDueDate('');
+      setError(null);
     } catch (err) {
       setError('Error adding item: ' + err.message);
       console.error('Error adding item:', err);
@@ -73,6 +79,51 @@ function App() {
     }
   };
 
+  const toggleSortByDueDate = () => {
+    setSortByDueDate((prev) => !prev);
+  };
+
+  const startEdit = (item) => {
+    setEditingItem({ ...item });
+  };
+
+  const cancelEdit = () => {
+    setEditingItem(null);
+  };
+
+  const saveEdit = async () => {
+    if (!editingItem || !editingItem.name.trim()) {
+      setError('Item name is required for edit');
+      return;
+    }
+
+    try {
+      const response = await fetch(`/api/items/${editingItem.id}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ name: editingItem.name.trim(), dueDate: editingItem.due_date || null }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to update item');
+      }
+
+      const result = await response.json();
+      setData(data.map((item) => (item.id === result.id ? result : item)));
+      setEditingItem(null);
+      setError(null);
+    } catch (err) {
+      setError('Error updating item: ' + err.message);
+      console.error('Error updating item:', err);
+    }
+  };
+
+  const updateEditingItem = (field, value) => {
+    setEditingItem((prev) => ({ ...prev, [field]: value }));
+  };
+
   return (
     <div className="App">
       <header className="App-header">
@@ -90,29 +141,80 @@ function App() {
               onChange={(e) => setNewItem(e.target.value)}
               placeholder="Enter item name"
             />
+            <input
+              type="date"
+              value={newDueDate}
+              onChange={(e) => setNewDueDate(e.target.value)}
+              aria-label="Due date"
+            />
             <button type="submit">Add Item</button>
           </form>
         </section>
 
         <section className="items-section">
+          <div className="sort-controls">
+            <button type="button" onClick={toggleSortByDueDate}>
+              {sortByDueDate ? 'Show original order' : 'Sort by due date'}
+            </button>
+          </div>
           <h2>Items from Database</h2>
           {loading && <p>Loading data...</p>}
           {error && <p className="error">{error}</p>}
           {!loading && !error && (
             <ul>
               {data.length > 0 ? (
-                data.map((item) => (
-                  <li key={item.id}>
-                    <span>{item.name}</span>
-                    <button 
-                      onClick={() => handleDelete(item.id)}
-                      className="delete-btn"
-                      type="button"
-                    >
-                      Delete
-                    </button>
-                  </li>
-                ))
+                data.map((item) => {
+                  const isEditing = editingItem && editingItem.id === item.id;
+
+                  return (
+                    <li key={item.id}>
+                      {isEditing ? (
+                        <div className="edit-row">
+                          <input
+                            type="text"
+                            value={editingItem.name}
+                            onChange={(e) => updateEditingItem('name', e.target.value)}
+                            aria-label="Edit item name"
+                          />
+                          <input
+                            type="date"
+                            value={editingItem.due_date || ''}
+                            onChange={(e) => updateEditingItem('due_date', e.target.value)}
+                            aria-label="Edit due date"
+                          />
+                          <button type="button" onClick={saveEdit}>
+                            Save
+                          </button>
+                          <button type="button" onClick={cancelEdit}>
+                            Cancel
+                          </button>
+                        </div>
+                      ) : (
+                        <>
+                          <span>
+                            {item.name}
+                            {item.due_date ? ` (due ${item.due_date})` : ' (no due date)'}
+                          </span>
+                          <div className="item-actions">
+                            <button
+                              type="button"
+                              onClick={() => startEdit(item)}
+                            >
+                              Edit
+                            </button>
+                            <button
+                              onClick={() => handleDelete(item.id)}
+                              className="delete-btn"
+                              type="button"
+                            >
+                              Delete
+                            </button>
+                          </div>
+                        </>
+                      )}
+                    </li>
+                  );
+                })
               ) : (
                 <p>No items found. Add some!</p>
               )}
