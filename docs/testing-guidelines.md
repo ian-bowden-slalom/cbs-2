@@ -12,6 +12,7 @@ This document defines testing standards for unit, integration, and end-to-end te
 ## 2. Integration tests
 - Use Jest + Supertest to test backend API endpoints with real HTTP requests.
 - Integration tests should be placed in `packages/backend/__tests__/integration/`.
+- Integration tests must exist and cover real CRUD and sorting behavior.
 - Naming convention: `*.test.js` or `*.test.ts`.
 - Name integration test files intelligently based on what they test (e.g., `todos-api.test.js` for TODO API endpoints).
 
